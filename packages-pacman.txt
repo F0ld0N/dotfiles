@@ -1,4 +1,4 @@
-# === Hyprland Desktop Environment ===
+# === Hyprland Desktop Environment & Display Manager ===
 hyprland
 hypridle
 hyprlock
@@ -21,6 +21,7 @@ polkit-kde-agent
 qt5-wayland
 qt6-wayland
 uwsm
+sddm
 
 # === Terminals & Shell Tools ===
 ghostty

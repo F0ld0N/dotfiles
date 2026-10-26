@@ -179,11 +179,19 @@ if command -v code &>/dev/null && [ -f "$DOTFILES_DIR/vscode-extensions.txt" ]; 
 fi
 
 # 8. Включение служб systemd
-read -rp "Включить и запустить необходимые службы systemd (NetworkManager, bluetooth, pipewire)? [y/N]: " enable_services
+read -rp "Включить и запустить необходимые службы systemd (NetworkManager, bluetooth, sddm, pipewire)? [y/N]: " enable_services
 if [[ "$enable_services" =~ ^[Yy]$ ]]; then
     log_info "Настройка служб systemd..."
     sudo systemctl enable --now NetworkManager 2>/dev/null || true
     sudo systemctl enable --now bluetooth 2>/dev/null || true
+    if command -v sddm &>/dev/null; then
+        sudo systemctl enable sddm 2>/dev/null || true
+        # Настройка темы corners, если установлена
+        if [ -d /usr/share/sddm/themes/corners ]; then
+            sudo mkdir -p /etc/sddm.conf.d
+            echo -e "[Theme]\nCurrent=corners" | sudo tee /etc/sddm.conf.d/theme.conf >/dev/null || true
+        fi
+    fi
     systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
     log_success "Службы активированы."
 fi
