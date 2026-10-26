@@ -1,0 +1,23 @@
+[opener]
+view_image = [
+    { run = 'viewnior %s', orphan = true, desc = "Открыть фото" },
+]
+play = [
+    { run = 'mpv %s', orphan = true, desc = "Открыть видео/аудио" },
+]
+edit_text = [
+    { run = 'nvim %s', block = true, desc = "Редактировать в Neovim" },
+]
+system_open = [
+    { run = 'xdg-open %s', orphan = true, desc = "Открыть в системе" },
+]
+
+[open]
+rules = [
+    { url = "*.{png,jpg,jpeg,webp,gif,bmp,svg,avif}", use = "view_image" },
+    { mime = "image/*", use = "view_image" },
+    { mime = "text/*",  use = "edit_text" },
+    { mime = "video/*", use = "play" },
+    { mime = "audio/*", use = "play" },
+    { url = "*",        use = "system_open" },
+]

@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+#
+# Toggle Syncthing user service status using fzf
+#
+# Requires: fzf, systemd (systemctl)
+
+UNIT_NAME="syncthing.service"
+
+get_status_label() {
+  # Проверяем, активен ли юнит в данный момент
+  if systemctl --user is-active --quiet "$UNIT_NAME"; then
+    echo "Syncthing is RUNNING"
+  else
+    echo "Syncthing is STOPPED"
+  fi
+}
+
+main() {
+  # Динамически получаем текущее состояние для шапки fzf
+  local current_status
+  current_status=$(get_status_label)
+
+  local list=(
+    "Toggle Service State"
+    "Show Full Status"
+  )
+
+  local options=(
+    "--border=sharp"
+    "--border-label= Syncthing Manager "
+    # Выводим текущий статус прямо в интерактивную шапку fzf
+    "--header=Current State: $current_status"
+    "--cycle"
+    "--height=~100%"
+    "--highlight-line"
+    "--info=inline-right"
+    "--pointer="
+    "--reverse"
+  )
+
+  local selected
+  selected=$(printf "%s\n" "${list[@]}" | fzf "${options[@]}")
+
+  case $selected in
+  "Toggle Service State")
+    # Если активен — выключаем, если выключен — включаем
+    if systemctl --user is-active --quiet "$UNIT_NAME"; then
+      systemctl --user stop "$UNIT_NAME"
+      notify-send "Syncthing stopped"
+      echo "Stopped $UNIT_NAME"
+    else
+      systemctl --user start "$UNIT_NAME"
+      notify-send "Syncthing started"
+      echo "Started $UNIT_NAME"
+    fi
+    ;;
+  "Show Full Status")
+    # Показываем полный вывод systemctl status
+    clear
+    systemctl --user status "$UNIT_NAME"
+    ;;
+  *)
+    return 1
+    ;;
+  esac
+}
+
+main

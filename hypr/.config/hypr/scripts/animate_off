@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+
+sleep 0.2
+# Скрываем курсор
+echo -ne "\e[?25l"
+
+TEXT="GOODBYE"
+
+# 16 плавных оттенков серого (от глубокого черного 233 до ярко-белого 255)
+colors=(233 235 237 239 241 243 245 247 249 251 252 253 254 255 255 254)
+NUM_COLORS=${#colors[@]}
+
+# Очищаем экран ОДИН раз перед запуском
+clear
+
+for ((frame = 0; frame < 80; frame++)); do
+  # Получаем актуальные размеры окна терминала
+  TERM_WIDTH=$(tput cols)
+  TERM_HEIGHT=$(tput lines)
+
+  # Генерируем ASCII-арт и считаем его размеры
+  ASCII_ART=$(figlet -w "$TERM_WIDTH" "$TEXT")
+  ART_HEIGHT=$(echo "$ASCII_ART" | wc -l)
+  MAX_LINE_LEN=$(echo "$ASCII_ART" | awk '{print length}' | sort -nr | head -n1)
+
+  # Вычисляем точные координаты для центра
+  PADDING_TOP=$(((TERM_HEIGHT - ART_HEIGHT) / 2))
+  PADDING_LEFT=$(((TERM_WIDTH - MAX_LINE_LEN) / 2))
+
+  # Корректируем, чтобы не уйти в минус на мелких экранах
+  ((PADDING_TOP < 4)) && PADDING_TOP=4
+  ((PADDING_LEFT < 12)) && PADDING_LEFT=12
+
+  dot="●"
+
+  # Левая и правая границы рамки по оси X
+  X_LEFT=$((PADDING_LEFT - 6))
+  X_RIGHT=$((PADDING_LEFT + MAX_LINE_LEN + 5))
+  X_WIDTH=$((X_RIGHT - X_LEFT))
+
+  # Функция для получения цвета точки в зависимости от кадра и её индекса
+  get_color() {
+    local dot_index=$1
+    local idx=$(((dot_index - frame) % NUM_COLORS))
+    echo "${colors[idx < 0 ? idx + NUM_COLORS : idx]}"
+  }
+
+  # --- 1. ВЫВОД ВЕРХНЕГО РЯДА (5 точек: 0, 1, 2, 3, 4) ---
+  # Сажаем точки строго по вычисленным колонкам X
+  tput cup $((PADDING_TOP - 2)) $X_LEFT
+  echo -e "\e[38;5;$(get_color 0)m${dot}\e[0m"
+  tput cup $((PADDING_TOP - 2)) $((X_LEFT + X_WIDTH / 4))
+  echo -e "\e[38;5;$(get_color 1)m${dot}\e[0m"
+  tput cup $((PADDING_TOP - 2)) $((X_LEFT + X_WIDTH / 2))
+  echo -e "\e[38;5;$(get_color 2)m${dot}\e[0m"
+  tput cup $((PADDING_TOP - 2)) $((X_LEFT + (X_WIDTH * 3) / 4))
+  echo -e "\e[38;5;$(get_color 3)m${dot}\e[0m"
+  tput cup $((PADDING_TOP - 2)) $X_RIGHT
+  echo -e "\e[38;5;$(get_color 4)m${dot}\e[0m"
+
+  # --- 2. ВЫВОД БОКОВЫХ СТОЛБЦОВ И ТЕКСТА ---
+  j=0
+  echo "$ASCII_ART" | while IFS= read -r line; do
+    CURRENT_ROW=$((PADDING_TOP + j))
+
+    # Печатаем текст строки
+    tput cup $CURRENT_ROW $PADDING_LEFT
+    echo "${line}"
+
+    # Жестко привязываем боковые точки к границам X_LEFT и X_RIGHT
+    if [ "$j" -eq 0 ] || [ "$ART_HEIGHT" -le 3 -a "$j" -eq 0 ]; then
+      # Верхняя пара боковых
+      tput cup $CURRENT_ROW $X_LEFT
+      echo -e "\e[38;5;$(get_color 15)m${dot}\e[0m"
+      tput cup $CURRENT_ROW $X_RIGHT
+      echo -e "\e[38;5;$(get_color 5)m${dot}\e[0m"
+    elif [ "$j" -eq $((ART_HEIGHT / 2)) ]; then
+      # Центральная пара боковых
+      tput cup $CURRENT_ROW $X_LEFT
+      echo -e "\e[38;5;$(get_color 14)m${dot}\e[0m"
+      tput cup $CURRENT_ROW $X_RIGHT
+      echo -e "\e[38;5;$(get_color 6)m${dot}\e[0m"
+    elif [ "$j" -eq $((ART_HEIGHT - 1)) ]; then
+      # Нижняя пара боковых
+      tput cup $CURRENT_ROW $X_LEFT
+      echo -e "\e[38;5;$(get_color 13)m${dot}\e[0m"
+      tput cup $CURRENT_ROW $X_RIGHT
+      echo -e "\e[38;5;$(get_color 7)m${dot}\e[0m"
+    fi
+    j=$((j + 1))
+  done
+
+  # --- 3. ВЫВОД НИЖНЕГО РЯДА (5 точек: 12, 11, 10, 9, 8) ---
+  tput cup $((PADDING_TOP + ART_HEIGHT + 1)) $X_LEFT
+  echo -e "\e[38;5;$(get_color 12)m${dot}\e[0m"
+  tput cup $((PADDING_TOP + ART_HEIGHT + 1)) $((X_LEFT + X_WIDTH / 4))
+  echo -e "\e[38;5;$(get_color 11)m${dot}\e[0m"
+  tput cup $((PADDING_TOP + ART_HEIGHT + 1)) $((X_LEFT + X_WIDTH / 2))
+  echo -e "\e[38;5;$(get_color 10)m${dot}\e[0m"
+  tput cup $((PADDING_TOP + ART_HEIGHT + 1)) $((X_LEFT + (X_WIDTH * 3) / 4))
+  echo -e "\e[38;5;$(get_color 9)m${dot}\e[0m"
+  tput cup $((PADDING_TOP + ART_HEIGHT + 1)) $X_RIGHT
+  echo -e "\e[38;5;$(get_color 8)m${dot}\e[0m"
+
+  sleep 0.06
+done
+
+# Возвращаем терминал в исходное состояние перед выходом
+echo -ne "\e[?25h"
+clear

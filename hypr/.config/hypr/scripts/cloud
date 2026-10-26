@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+#
+# Управление монтированием Google Drive через rclone с использованием fzf
+#
+# Требования: fzf, rclone, fusermount3 (или fusermount)
+
+REMOTE_NAME="RemoteDisk:"
+MOUNT_POINT="$HOME/trash/sync"
+
+get_status_label() {
+  # Проверяем, является ли папка активной точкой монтирования
+  if mountpoint -q "$MOUNT_POINT"; then
+    echo "Cloud on"
+  else
+    echo "Cloud off"
+  fi
+}
+
+clear_rclone_cache() {
+  echo "Очистка кэша rclone..."
+
+  # Используем $HOME вместо кавычек вокруг тильды, чтобы маска * сработала правильно
+  if [ -d "$HOME/.cache/rclone/vfs" ]; then
+    rm -rf "$HOME/.cache/rclone/vfs/"*
+    echo "✓ vfs cleared"
+  fi
+
+  if [ -d "$HOME/.cache/rclone/vfsMeta" ]; then
+    rm -rf "$HOME/.cache/rclone/vfsMeta/"*
+    echo "✓ vfsMeta cleared"
+  fi
+
+  notify-send "Rclone" "Кэш успешно очищен"
+  sleep 1
+}
+
+main() {
+  # Динамически получаем текущее состояние для шапки fzf
+  local current_status
+  current_status=$(get_status_label)
+
+  local list=(
+    "Toggle Mount State"
+    "Clear VFS Cache"
+    "Show Mount Info"
+  )
+
+  local options=(
+    "--border=sharp"
+    "--border-label= Rclone Google Drive Manager "
+    # Выводим текущий статус прямо в интерактивную шапку fzf
+    "--header=Current State: $current_status"
+    "--cycle"
+    "--height=~100%"
+    "--highlight-line"
+    "--info=inline-right"
+    "--pointer="
+    "--reverse"
+  )
+
+  local selected
+  selected=$(printf "%s\n" "${list[@]}" | fzf "${options[@]}")
+
+  case $selected in
+  "Toggle Mount State")
+    if mountpoint -q "$MOUNT_POINT"; then
+      # Если смонтировано — размонтируем
+      fusermount -u "$MOUNT_POINT"
+      notify-send "Rclone" "Google Drive размонтирован"
+      echo "Unmounted $MOUNT_POINT"
+    else
+      # Если не смонтировано — включаем в фоне
+      rclone mount "$REMOTE_NAME" "$MOUNT_POINT" --vfs-cache-mode full --daemon
+      notify-send "Rclone" "Google Drive подключен"
+      echo "Mounted $REMOTE_NAME to $MOUNT_POINT"
+    fi
+    ;;
+  "Clear VFS Cache")
+    clear
+    # Перед очисткой кэша правильнее проверить, не активен ли диск,
+    # но rclone обычно переваривает очистку кэша "на горячую".
+    clear_rclone_cache
+    ;;
+  "Show Mount Info")
+    clear
+    if mountpoint -q "$MOUNT_POINT"; then
+      echo "=== Статус диска ==="
+      df -h "$MOUNT_POINT"
+      echo -e "\n=== Активные процессы rclone ==="
+      ps aux | grep "[r]clone mount"
+    else
+      echo "Диск не примонтирован."
+    fi
+    echo -e "\nНажмите Enter, чтобы выйти..."
+    read -r
+    ;;
+  *)
+    return 1
+    ;;
+  esac
+}
+
+main

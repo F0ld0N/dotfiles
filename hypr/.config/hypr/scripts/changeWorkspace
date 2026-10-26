@@ -1,0 +1,40 @@
+#!/bin/bash
+
+CONFIG_DIR="$HOME/.cache/config"
+CONFIG_FILE="$CONFIG_DIR/countspace.conf"
+
+# Создаем директорию и файл конфигурации по умолчанию, если они отсутствуют
+mkdir -p "$CONFIG_DIR"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "2" > "$CONFIG_FILE"
+fi
+
+# Читаем значение из конфига (по умолчанию 2, если файл поврежден)
+EXTRA_COUNT=$(cat "$CONFIG_FILE" | tr -d '[:space:]')
+[[ "$EXTRA_COUNT" =~ ^[0-9]+$ ]] || EXTRA_COUNT=2
+
+# Формируем список для fzf:
+# Первая опция — управление конфигом, остальные — чистые номера воркспейсов
+options="⚙ Изменить количество столов"
+for ((i = 1; i <= EXTRA_COUNT; i++)); do
+    options+=$'\n'$((10 + i))
+done
+
+# Запускаем fzf для выбора
+selected=$(echo -e "$options" | fzf --prompt="Workspace > 10: " --height=40% --layout=reverse --border=sharp --info=inline-right)
+
+# Обрабатываем выбор пользователя
+if [[ "$selected" == *"Изменить количество"* ]]; then
+    # Запрос нового числа через терминал
+    echo -e "\n----------------------------------------"
+    read -p "Введите количество дополнительных воркспейсов (например, 5 для воркспейсов до 15): " new_count
+    if [[ "$new_count" =~ ^[0-9]+$ ]]; then
+        echo "$new_count" > "$CONFIG_FILE"
+        echo "Успешно! Теперь доступно воркспейсов > 10: $new_count (всего до $((10 + new_count)))."
+    else
+        echo "Ошибка: введено не число."
+    fi
+elif [[ "$selected" =~ ^[0-9]+$ ]]; then
+    # Переключаемся на выбранный воркспейс через hyprctl
+    hyprctl eval "hl.dispatch(hl.dsp.focus({ workspace = \"$selected\" }))"
+fi

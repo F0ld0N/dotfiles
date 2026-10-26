@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+curl -s https://open.er-api.com/v6/latest/USD | jq '.rates.RUB'

@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Пути
+DOWNLOADS="$HOME/Downloads"
+ARCHIVE="$HOME/Save"
+
+# Создаем структуру папок
+mkdir -p "$DOWNLOADS/nonsort" \
+  "$ARCHIVE/Collection/Anime/Arts_kaif" \
+  "$ARCHIVE/Collection/Anime/Arts" \
+  "$ARCHIVE/Collection/Anime/Movies" \
+  "$ARCHIVE/Collection/Albums/memes/Videos" \
+  "$ARCHIVE/Collection/Albums/memes/Images" \
+  "$ARCHIVE/Collection/Albums/memes/Black" \
+  "$ARCHIVE/Collection/Albums/Vibik/Images" \
+  "$ARCHIVE/Collection/Albums/Vibik/Videos" \
+  "$ARCHIVE/Collection/Albums/fordialogs" \
+  "$ARCHIVE/Collection/Albums/icons" \
+  "$ARCHIVE/Collection/Info/_nonsort" \
+  "$ARCHIVE/trash/zavoz/drawed/images" \
+  "$ARCHIVE/trash/zavoz/drawed/videos" \
+  "$ARCHIVE/trash/zavoz/drawed/Albums/Shorts" \
+  "$ARCHIVE/trash/zavoz/real/kaif/images" \
+  "$ARCHIVE/trash/zavoz/real/kaif/videos" \
+  "$ARCHIVE/trash/zavoz/real/Albums/Cosplay/images" \
+  "$ARCHIVE/trash/zavoz/real/Albums/Cosplay/videos" \
+  "$ARCHIVE/trash/zavoz/real/Albums/Alt/images" \
+  "$ARCHIVE/trash/zavoz/real/Albums/Alt/videos" \
+  "$ARCHIVE/trash/zavoz/real/Albums/Shorts"
+
+cd "$DOWNLOADS" || exit
+
+# Функция для безопасного перемещения
+# Принимает: файл, целевую директорию, префикс для лога
+move_safe() {
+  local file="$1"
+  local dest="$2"
+  local label="$3"
+
+  # Проверяем, существует ли уже файл в целевой папке
+  if [[ -e "$dest/$(basename "$file")" ]]; then
+    echo "Skipped (already exists): $file"
+  else
+    # Перемещаем. Если mv все равно вернет ошибку, || true не даст скрипту упасть
+    mv -n "$file" "$dest/" && echo "Sorted $label: $file" || true
+  fi
+}
+
+# Используем nullglob, чтобы избежать ошибок с пустыми папками
+shopt -s nullglob
+
+find . -maxdepth 1 -type f | while read -r file; do
+  filename="${file:2}"
+
+  # Игнорируем сам скрипт
+  if [[ "$filename" == "$(basename "$0")" ]]; then
+    continue
+  fi
+
+  # Извлекаем расширение и приводим к нижнему регистру
+  ext="${filename##*.}"
+  ext="${ext,,}"
+
+  case "$filename" in
+  info_*)
+    move_safe "$filename" "$ARCHIVE/Collection/Info/_nonsort" "Info"
+    ;;
+  artkaif_*)
+    move_safe "$filename" "$ARCHIVE/Collection/Anime/Arts_kaif" "ArtKaif"
+    ;;
+  # art_*)
+  #   move_safe "$filename" "$ARCHIVE/Collection/Anime/Arts" "Art"
+  #   ;;
+  art_*)
+    case "$ext" in
+    mp4 | mkv | mov | avi) move_safe "$filename" "$ARCHIVE/Collection/Anime/Movies" "Art_Video" ;;
+    *) move_safe "$filename" "$ARCHIVE/Collection/Anime/Arts" "Art" ;;
+    esac
+    ;;
+  icon_*)
+    move_safe "$filename" "$ARCHIVE/Collection/Albums/icons" "Icon"
+    ;;
+  vibe_*)
+    case "$ext" in
+    mp4 | mkv | mov | avi) move_safe "$filename" "$ARCHIVE/Collection/Albums/Vibik/Videos" "Vibe" ;;
+    *) move_safe "$filename" "$ARCHIVE/Collection/Albums/Vibik/Images" "Vibe" ;;
+    esac
+    ;;
+  memeblack_*)
+    move_safe "$filename" "$ARCHIVE/Collection/Albums/memes/Black" "MemeBlack"
+    ;;
+  meme_*)
+    case "$ext" in
+    mp4 | mkv | mov | avi | gif) move_safe "$filename" "$ARCHIVE/Collection/Albums/memes/Videos" "Meme" ;;
+    *) move_safe "$filename" "$ARCHIVE/Collection/Albums/memes/Images" "Meme" ;;
+    esac
+    ;;
+  dialog_*)
+    move_safe "$filename" "$ARCHIVE/Collection/Albums/fordialogs" "Dialogue"
+    ;;
+  34shorta_*)
+    move_safe "$filename" "$ARCHIVE/trash/zavoz/drawed/Albums/Shorts" "34_anime_short"
+    ;;
+  34short_*)
+    move_safe "$filename" "$ARCHIVE/trash/zavoz/real/Albums/Shorts" "34short"
+    ;;
+  34cos_*)
+    case "$ext" in
+    mp4 | mkv | mov | avi | gif) move_safe "$filename" "$ARCHIVE/trash/zavoz/real/Albums/Cosplay/videos" "34cos" ;;
+    *) move_safe "$filename" "$ARCHIVE/trash/zavoz/real/Albums/Cosplay/images" "34cos" ;;
+    esac
+    ;;
+  34alt_*)
+    case "$ext" in
+    mp4 | mkv | mov | avi | gif) move_safe "$filename" "$ARCHIVE/trash/zavoz/real/Albums/Alt/videos" "34alt" ;;
+    *) move_safe "$filename" "$ARCHIVE/trash/zavoz/real/Albums/Alt/images" "34alt" ;;
+    esac
+    ;;
+  34a_*)
+    case "$ext" in
+    mp4 | mkv | mov | avi | gif) move_safe "$filename" "$ARCHIVE/trash/zavoz/drawed/videos" "34art" ;;
+    *) move_safe "$filename" "$ARCHIVE/trash/zavoz/drawed/images" "34art" ;;
+    esac
+    ;;
+  34_*)
+    case "$ext" in
+    mp4 | mkv | mov | avi | gif) move_safe "$filename" "$ARCHIVE/trash/zavoz/real/kaif/videos" "34" ;;
+    *) move_safe "$filename" "$ARCHIVE/trash/zavoz/real/kaif/images" "34" ;;
+    esac
+    ;;
+  *)
+    move_safe "$filename" "$DOWNLOADS/nonsort" "Unsorted"
+    ;;
+  esac
+done

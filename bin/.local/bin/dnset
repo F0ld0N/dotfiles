@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+dnsproxy -u "$1" -b 8.8.8.8:53 -l 127.0.0.1 -p 5353

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Функция для вывода справки
+usage() {
+  echo "Использование: weather city"
+  exit 1
+}
+
+# Проверяем, остался ли сам поисковый запрос
+if [ -z "${1:-}" ]; then
+  echo "Ошибка: Не указан город."
+  usage
+fi
+
+# Объединяем оставшиеся аргументы и кодируем пробелы в '+'
+QUERY=$(echo "$*" | tr ' ' '+')
+
+URL="https://wttr.in/${QUERY}"
+
+# Проверяем, установлен ли LibreWolf
+if ! command -v librewolf &>/dev/null; then
+  echo "Ошибка: librewolf не найден в системе."
+  exit 1
+fi
+
+# Запускаем и отвязываем процесс от терминала
+librewolf --private-window "$URL" &
+disown

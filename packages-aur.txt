@@ -1,0 +1,8 @@
+# === AUR Packages ===
+wlogout
+tty-clock
+sherlock-launcher-bin
+visual-studio-code-bin
+librewolf-bin
+ayugram-desktop-bin
+termusic

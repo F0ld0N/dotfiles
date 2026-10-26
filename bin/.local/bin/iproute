@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# 1. Проверяем аргумент и наличие jq
+if [ -z "${1:-}" ]; then
+  echo "Ошибка: Не указан домен для traceroute."
+  echo "Использование: ipcheck <domain>"
+  exit 1
+fi
+
+if ! command -v jq &>/dev/null; then
+  echo "Ошибка: Для работы скрипта необходима утилита 'jq'."
+  echo "Установите её: sudo apt install jq"
+  exit 1
+fi
+
+TARGET="$1"
+
+echo "Запуск traceroute для ${TARGET}..."
+echo "--------------------------------------------------"
+
+# 2. Запускаем traceroute и обрабатываем построчно
+# Флаг -n отключает резолв имен внутри самого traceroute, что ускоряет процесс
+traceroute -n "$TARGET" | while read -r line; do
+
+  # Пропускаем строки со звездочками (таймауты) или заголовок traceroute
+  if [[ "$line" == *"\*"* ]] || [[ "$line" == "traceroute to"* ]]; then
+    continue
+  fi
+
+  # Извлекаем первый попавшийся IPv4 адрес из строки маршрута
+  if [[ "$line" =~ ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}) ]]; then
+    IPADDR="${BASH_REMATCH[1]}"
+
+    # Исключаем локальные/приватные IP (опционально, ip-api вернет ошибку "private range")
+    # Делаем запрос к API (строго JSON)
+    URL="http://ip-api.com/json/${IPADDR}"
+    RESPONSE=$(curl -sS "$URL")
+
+    # Проверяем, успешный ли ответ от API (fail/success)
+    STATUS=$(echo "$RESPONSE" | jq -r '.status')
+
+    if [ "$STATUS" = "success" ]; then
+      # Вытаскиваем только нужные поля в красивом JSON-формате
+      echo "$RESPONSE" | jq '{
+        regionName: .regionName,
+        city: .city,
+        timezone: .timezone,
+        isp: .isp,
+        org: .org,
+        as: .as,
+        query: .query
+      }'
+
+      # Выводим разделитель после стека строк хопа
+      echo "--------------------------------------------------"
+    fi
+  fi
+done

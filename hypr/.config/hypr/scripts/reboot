@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Запускаем терминал, крутим анимацию 4 секунды и тушим ПК через systemctl
+# kitty --class="shutdown_anim" -o background_opacity=1.0 -e bash -c "$HOME/.config/hypr/scripts/animate_off" &
+kitty --start-as=fullscreen -o background_opacity=1.0 -e "$HOME/.config/hypr/scripts/animate_reboot" &
+disown || true
+
+sleep 4
+
+systemctl reboot

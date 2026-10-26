@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# 1. Проверяем, передан ли аргумент. Если нет — выводим подсказку.
+if [ -z "${1:-}" ]; then
+  echo "Ошибка: Не указан IP-адрес."
+  echo "Использование: $0 <IP_ADDR>"
+  exit 1
+fi
+
+IPADDR="$1"
+# URL="http://ip-api.com/json/${IPADDR}"
+URL="http://ip-api.com/${IPADDR}"
+
+# 2. Отправляем запрос через curl
+# Флаги: -s (silent, убирает прогресс-бар), -S (показывает ошибки, если curl упадет)
+echo "Запрос данных для IP: ${IPADDR}..."
+RESPONSE=$(curl -sS "$URL")
+
+# 3. Выводим результат
+# Если установлена утилита jq, то выводим красивый цветной JSON. Иначе — обычный текст.
+if command -v jq &>/dev/null; then
+  #   echo "$RESPONSE" | jq '.'
+  echo "$RESPONSE"
+else
+  echo "$RESPONSE"
+  echo -e "\n[Подсказка] Установите утилиту 'jq' (sudo apt install jq), чтобы вывод был отформатирован."
+fi

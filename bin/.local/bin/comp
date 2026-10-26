@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Изменили логику проверки аргументов:
+# Если аргументов нет И мы НЕ запускаем метод "b", тогда это ошибка.
+# Метод -b можно запускать вообще без аргументов.
+if [[ $# -eq 0 && ! "$*" =~ -b ]]; then
+  echo "Ошибка: не были переданы аргументы."
+  echo "Подсказка: ${0} -rqa Имя_файла.png или .jpg"
+  echo "Или автоматическая обработка: ${0} -b"
+  exit 1
+fi
+
+METHOD="check"
+
+while getopts "arqb" opt; do
+  case $opt in
+  a) METHOD="a" ;;
+  r) METHOD="r" ;;
+  q) METHOD="q" ;;
+  b) METHOD="b" ;;
+  *)
+    echo "Usage: $0 [-r] [-q] [-rq] [-b] [имя файла.jpg или .png]"
+    exit 1
+    ;;
+  esac
+done
+
+# --- Автоматический режим (метод -b) ---
+if [[ "$METHOD" == "b" ]]; then
+  echo "Запущен автоматический режим (поиск и обработка файлов > 2MB)..."
+  echo "--------------------------------------------------------"
+
+  # 1. Находим файлы и сохраняем их в массив, чтобы корректно работать с пробелами в именах.
+  # -printf "%f\n" берет только имя файла без "./"
+  mapfile -t LARGE_FILES < <(find . -maxdepth 1 -type f -size +2M \( -iname "*.jpg" -o -iname "*.png" \) -printf "%f\n")
+
+  if [[ ${#LARGE_FILES[@]} -eq 0 ]]; then
+    echo "Файлы > 2MB с расширением .jpg/.png не найдены."
+    echo "--------------------------------------------------------"
+    exit 0
+  fi
+
+  # 2. Прогоняем каждый найденный файл через magick (аналог метода "a")
+  for PHOTO in "${LARGE_FILES[@]}"; do
+    echo "Обработка: ${PHOTO}"
+    magick "${PHOTO}" -quality 80 -resize 50% "${PHOTO}"
+  done
+
+  echo "--------------------------------------------------------"
+  echo "Обработка завершена. Всего обработано файлов: ${#LARGE_FILES[@]}"
+  exit 0
+fi
+
+# --- Ручной режим (методы a, r, q) ---
+COUNTER=0
+for PHOTO in "$@"; do
+  if [[ $COUNTER -eq 0 ]]; then
+    COUNTER=1
+    continue
+  fi
+
+  case $METHOD in
+  a)
+    magick "${PHOTO}" -quality 80 -resize 50% "${PHOTO}"
+    ;;
+  r)
+    magick "${PHOTO}" -resize 50% "${PHOTO}"
+    ;;
+  q)
+    magick "${PHOTO}" -quality 80 "${PHOTO}"
+    ;;
+  esac
+done

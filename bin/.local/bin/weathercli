@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Инициализируем переменные по умолчанию
+IPADDR=""
+DEFAULTCITY="Kemerovo"
+LINES_TO_CUT=3 # По умолчанию отрезаем 3 строки
+
+# 1. Парсим аргументы командной строки
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  -n)
+    LINES_TO_CUT=33
+    shift # Сдвигаем аргументы, чтобы убрать '-n'
+    ;;
+  -*)
+    echo "Ошибка: Неизвестный флаг $1"
+    echo "Использование: $0 [-n] <IP_ADDR>"
+    exit 1
+    ;;
+  *)
+    # Если аргумент не начинается с дефиса, считаем его IP-адресом
+    if [ -z "$IPADDR" ]; then
+      IPADDR="$1"
+    else
+      echo "Ошибка: Указано несколько IP-адресов."
+      exit 1
+    fi
+    shift
+    ;;
+  esac
+done
+
+# Проверяем, был ли передан IP-адрес
+if [ -z "$IPADDR" ]; then
+  echo "Ошибка: Не указан IP-адрес."
+  echo "Используется город по умолчанию."
+  URL="http://wttr.in/${DEFAULTCITY}"
+  RESPONSE=$(curl -sS "$URL")
+  if command -v jq &>/dev/null; then
+  echo "$RESPONSE" | head -n -"$LINES_TO_CUT"
+  else
+    echo "$RESPONSE" | head -n -"$LINES_TO_CUT"
+    echo -e "\n[Подсказка] Установите утилиту 'jq' (sudo apt install jq), чтобы вывод был отформатирован."
+  fi
+  exit 1
+fi
+
+URL="http://wttr.in/${IPADDR}"
+
+# 2. Отправляем запрос через curl
+echo "Запрос данных для IP: ${IPADDR}..."
+RESPONSE=$(curl -sS "$URL")
+
+# 3. Выводим результат
+# Передаем динамическое количество строк в head (используем знак минус перед переменной)
+if command -v jq &>/dev/null; then
+  echo "$RESPONSE" | head -n -"$LINES_TO_CUT"
+else
+  echo "$RESPONSE" | head -n -"$LINES_TO_CUT"
+  echo -e "\n[Подсказка] Установите утилиту 'jq' (sudo apt install jq), чтобы вывод был отформатирован."
+fi

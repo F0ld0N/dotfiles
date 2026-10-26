@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Восстановление курсора при выходе
+trap 'tput cnorm; clear; exit 0' INT TERM EXIT
+tput civis
+
+# Масштабирование: в терминалах высота строки обычно в ~2.3 раза больше ширины символа
+ASPECT_RATIO_X=23
+ASPECT_RATIO_Y=10
+
+WHITE='\033[1;37m'
+NC='\033[0m'
+
+# Начальная фаза анимации
+phase=0
+
+while true; do
+  LINES=$(tput lines)
+  COLS=$(tput cols)
+
+  CENTER_Y=$((LINES / 2))
+  CENTER_X=$((COLS / 2))
+
+  # Максимальный радиус по вертикали (базовый шаг)
+  MAX_R=$((CENTER_Y > CENTER_X ? CENTER_Y + 4 : CENTER_X + 4))
+
+  # Инициализируем буфер кадра пустыми строками
+  buffer=""
+
+  for ((y = 0; y < LINES; y++)); do
+    line=""
+    for ((x = 0; x < COLS; x++)); do
+      # Считаем расстояние от центра с учетом пропорций экрана
+      dx=$((x - CENTER_X))
+      dy=$((y - CENTER_Y))
+
+      # Приводим к общему масштабу
+      abs_dx=$((dx < 0 ? -dx : dx))
+      abs_dy=$((dy < 0 ? -dy : dy))
+
+      # Пересчет координат в "честные" пропорции
+      norm_x=$((abs_dx * ASPECT_RATIO_Y))
+      norm_y=$((abs_dy * ASPECT_RATIO_X))
+
+      # Для идеального квадрата используем Чебышёвское расстояние max(x, y)
+      r=$((norm_x > norm_y ? norm_x : norm_y))
+
+      # Переводим радиус обратно в масштаб строк
+      r_scaled=$((r / ASPECT_RATIO_X))
+
+      is_wall=0
+
+      # 1. Постоянный центральный квадрат (ядро-сердце)
+      if ((r_scaled >= 2 && r_scaled <= 4)); then
+        is_wall=1
+      fi
+
+      # 2. Пульсирующие внешние волны
+      wave_radius=$(((r_scaled - phase) % 8))
+      if ((wave_radius == 0 || wave_radius == 1)); then
+        if ((r_scaled > 4)); then
+          is_wall=1
+        fi
+      fi
+
+      # Заполняем пиксель
+      if ((is_wall == 1)); then
+        line+="#"
+      else
+        line+=" "
+      fi
+    done
+    buffer+="${line}\n"
+  done
+
+  # Отрисовка кадра из буфера
+  tput cup 0 0
+  printf "${WHITE}%b${NC}" "$buffer"
+
+  # Сдвиг фазы волн (скорость пульсации)
+  phase=$(((phase + 1) % 8))
+
+  # ИСПРАВЛЕНИЕ: Добавлено </dev/tty, чтобы читать только реальное нажатие клавиши
+  if read -r -s -n 1 -t 0.06 </dev/tty; then
+    exit 0
+  fi
+done

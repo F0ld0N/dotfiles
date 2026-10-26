@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# --- Настройки путей ---
+CACHE_DIR="$HOME/.cache/config"
+REAL_CONFIG="$HOME/.config/waybar/config.jsonc"
+HYPR_REAL_CONFIG="$HOME/.config/hypr/hyprland.lua"
+
+# Формируем пути к файлам в кэше на основе базовой директории
+CACHE_CONFIG="$CACHE_DIR/config.jsonc"
+TMP_CONFIG="$CACHE_DIR/config.jsonc.tmp"
+HYPR_CACHE_CONFIG="$CACHE_DIR/hyprland.lua"
+HYPR_TMP_CONFIG="$CACHE_DIR/hyprland.lua.tmp"
+
+# --- Логика обмена файлов местами ---
+mv "$REAL_CONFIG" "$TMP_CONFIG" && mv "$CACHE_CONFIG" "$REAL_CONFIG"
+mv "$TMP_CONFIG" "$CACHE_CONFIG"
+
+mv "$HYPR_REAL_CONFIG" "$HYPR_TMP_CONFIG" && mv "$HYPR_CACHE_CONFIG" "$HYPR_REAL_CONFIG"
+mv "$HYPR_TMP_CONFIG" "$HYPR_CACHE_CONFIG"
+
+bash "$HOME/.config/hypr/scripts/poweroff"

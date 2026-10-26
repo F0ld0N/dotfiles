@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Дефолтные настройки
+SEARCH_ENGINE="ddg"  # По умолчанию ищем в DuckDuckGo
+WINDOW_MODE="new"    # По умолчанию открываем в новом окне
+PRIVATE_MODE="false" # По умолчанию окно обычное
+
+# Функция для вывода справки
+usage() {
+  echo "Использование: browse [-p] [-y] [-i] [-d] [-c] ваш поисковый запрос"
+  echo "  -p  Открыть в приватном окне (инкогнито)"
+  echo "  -y  Искать на YouTube вместо DuckDuckGo"
+  echo "  -i  Искать изображения на Pinterest вместо DuckDuckGo"
+  echo "  -d  DeepSearch в perplexity"
+  echo "  -c  Открыть в существующем окне (новая вкладка)"
+  exit 1
+}
+
+# Парсим флаги
+while getopts "pycid" opt; do
+  case "${opt}" in
+  p) PRIVATE_MODE="true" ;;
+  y) SEARCH_ENGINE="youtube" ;;
+  i) SEARCH_ENGINE="pinterest" ;;
+  d) SEARCH_ENGINE="perplexity" ;;
+  c) WINDOW_MODE="current" ;;
+  *) usage ;;
+  esac
+done
+
+# Сдвигаем указатель аргументов, чтобы убрать обработанные флаги
+shift $((OPTIND - 1))
+
+# Проверяем, остался ли сам поисковый запрос
+if [ -z "${1:-}" ]; then
+  echo "Ошибка: Не указан поисковый запрос."
+  usage
+fi
+
+# Объединяем оставшиеся аргументы и кодируем пробелы в '+'
+QUERY=$(echo "$*" | tr ' ' '+')
+
+# Формируем URL в зависимости от выбранного движка
+if [ "$SEARCH_ENGINE" = "youtube" ]; then
+  URL="https://www.youtube.com/results?search_query=${QUERY}"
+elif [ "$SEARCH_ENGINE" = "pinterest" ]; then
+  URL="https://ru.pinterest.com/search/pins/?q=${QUERY}&rs=typed"
+elif [ "$SEARCH_ENGINE" = "perplexity" ]; then
+  URL="https://www.perplexity.ai/search?q=${QUERY}"
+else
+  URL="https://duckduckgo.com/?q=${QUERY}"
+fi
+
+# Проверяем, установлен ли LibreWolf
+if ! command -v librewolf &>/dev/null; then
+  echo "Ошибка: librewolf не найден в системе."
+  exit 1
+fi
+
+# Собираем аргументы для запуска LibreWolf
+# LibreWolf (как и Firefox) использует:
+#   --new-window  для нового окна
+#   --new-tab     для новой вкладки в существующем окне
+#   --private-window для приватного режима (он всегда форсит новое окно)
+FLAGS=""
+
+if [ "$PRIVATE_MODE" = "true" ]; then
+  FLAGS="--private-window"
+elif [ "$WINDOW_MODE" = "new" ]; then
+  FLAGS="--new-window"
+else
+  FLAGS="--new-tab"
+fi
+
+# Запускаем и отвязываем процесс от терминала
+librewolf $FLAGS "$URL" &
+disown

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Базовая директория со скриптами
+SCRIPTS_DIR="/home/fyuchi0/Save/obsidian/99. Archive/Scripts"
+
+# Функция вывода справки
+show_help() {
+  cat <<EOF
+Использование: obscript [ОПЦИЯ]
+
+Утилита для управления генерацией заметок и скриптами Obsidian.
+
+Опции:
+  --diary        Запустить генерацию Diary (DiaryGenerateObsidianBaseTxt.py)
+  --full         Запустить полную генерацию базы (FullGenerateObsidianBase.py)
+  --files        Запустить скрипт последних файлов (LastFiles.py)
+  --stats        Запустить сбор статистики заметок (Status.py)
+  -h, --help     Показать это справочное сообщение
+
+Примеры:
+  obscript --diary
+  obscript --full
+EOF
+}
+
+# Проверка на отсутствие аргументов
+if [ $# -eq 0 ]; then
+  show_help
+  exit 0
+fi
+
+# Обработка переданных аргументов
+case "$1" in
+--diary)
+  python3 "$SCRIPTS_DIR/DiaryGenerateObsidianBaseTxt.py"
+  ;;
+--full)
+  python3 "$SCRIPTS_DIR/FullGenerateObsidianBase.py"
+  ;;
+--files)
+  python3 "$SCRIPTS_DIR/LastFiles.py"
+  ;;
+--stats)
+  python3 "$SCRIPTS_DIR/Status.py"
+  ;;
+-h | --help)
+  show_help
+  ;;
+*)
+  echo "Ошибка: Неизвестная опция '$1'" >&2
+  echo "Используйте 'obscript --help' для вывода списка доступных команд." >&2
+  exit 1
+  ;;
+esac

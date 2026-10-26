@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# --- Настройки путей ---
+CACHE_DIR="$HOME/.cache/config"
+REAL_CONFIG="/etc/systemd/resolved.conf"
+
+# Формируем пути к файлам в кэше на основе базовой директории
+CACHE_CONFIG="$CACHE_DIR/resolved.conf"
+TMP_CONFIG="$CACHE_DIR/resolved.conf.tmp"
+
+# --- Логика обмена файлов местами ---
+sudo mv "$REAL_CONFIG" "$TMP_CONFIG" && sudo mv "$CACHE_CONFIG" "$REAL_CONFIG"
+sudo mv "$TMP_CONFIG" "$CACHE_CONFIG"
+
+sudo systemctl restart systemd-resolved
